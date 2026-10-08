@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: resource-server
+
+server:
+  port: 8081
+
+resourceserver:
+  # Must equal the authorization server's "issuer" exactly (scheme, host, port, no trailing slash).
+  issuer: http://localhost:9000
+  # Configured directly rather than discovered from the issuer, so the API starts even while the
+  # authorization server is down; keys are fetched on the first request and cached.
+  jwk-set-uri: http://localhost:9000/oauth2/jwks
+  # This API's identifier. The authorization server puts it in "aud" for tokens with orders.* scopes.
+  audience: orders-api

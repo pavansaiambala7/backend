@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: client-app
+
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m
+      tracking-modes: cookie      # never ;jsessionid= in URLs
+      cookie:
+        # Own name, so it never collides with the authorization server's cookie on the same machine.
+        name: BFF_SESSION
+        http-only: true           # page scripts cannot read the session cookie
+        # Lax, not Strict: the OAuth callback (/login/oauth2/code/...) is a top-level navigation coming
+        # from the authorization server's site, and it needs this session to find the saved state,
+        # nonce and PKCE verifier. Lax still withholds the cookie from cross-site POSTs and subresources.
+        same-site: lax
+        secure: false             # plain http on 127.0.0.1 in development; the prod profile turns it on
+
+bff:
+  registration-id: auth-server
+  provider:
+    # Copied from http://localhost:9000/.well-known/openid-configuration.
+    issuer: http://localhost:9000
+    authorization-uri: http://localhost:9000/oauth2/authorize
+    token-uri: http://localhost:9000/oauth2/token
+    jwk-set-uri: http://localhost:9000/oauth2/jwks
+    user-info-uri: http://localhost:9000/userinfo
+    end-session-uri: http://localhost:9000/connect/logout
+  client:
+    client-id: bff-client
+    # DEMO ONLY default. Set BFF_CLIENT_SECRET (from a secret manager) anywhere real.
+    client-secret: ${BFF_CLIENT_SECRET:bff-client-demo-secret}
+    scopes: openid, profile, orders.read
+  orders-api:
+    base-url: http://localhost:8081
+    connect-timeout: 2s
+    read-timeout: 5s
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        # __Host- prefix: only accepted with Secure, Path=/ and no Domain, so a sibling subdomain or a
+        # plain-HTTP response cannot plant or overwrite it.
+        name: __Host-BFF_SESSION
+        secure: true

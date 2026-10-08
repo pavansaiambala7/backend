@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: jwt-auth
+  # No datasource URL: Spring Boot starts an in-memory H2 database with a unique name (DEMO ONLY).
+  jpa:
+    hibernate:
+      ddl-auto: validate          # schema.sql owns the schema; Hibernate only checks it
+    open-in-view: false
+
+server:
+  port: 8082
+
+auth:
+  jwt:
+    # Who issues the token and which API it is for. Verifiers compare both exactly (iss and aud).
+    issuer: http://localhost:8082
+    audience: jwt-demo-api
+    # RFC 9068 requires client_id; this API has one first-party client.
+    client-id: jwt-demo-web
+    access-token-ttl: 15m         # short: an access token cannot be revoked before it expires
+    clock-skew: 30s               # tolerance for exp/nbf/iat between hosts; keep it small (<= 60 s)
+  refresh-token:
+    # __Secure- prefix: browsers only accept this cookie from HTTPS (localhost counts) with Secure set,
+    # so a network attacker on plain HTTP cannot plant or overwrite it.
+    cookie-name: __Secure-refresh_token
+    # Sent only to /auth/** (refresh, logout), never to /api/** where it is not needed.
+    cookie-path: /auth
+    idle-timeout: 1d              # unused for this long: log in again
+    absolute-lifetime: 7d         # a family (one login) never outlives this, however active
+  csrf:
+    # Origins whose browser pages may call /auth/**. Requests with any other Origin header are refused.
+    allowed-origins:
+      - http://localhost:8082
+  # DEMO ONLY users. Hashes are Argon2id (m=19456 KiB, t=2, p=1); plaintext passwords never appear in config.
+  users:
+    - username: alice
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$A+CB4H1b4PE34yWasEsQWw$7YETTsrYiZS5ACL2Ngxu+lJPFc7PYlFm8SGprRbVYu0"   # DEMO password: alice-demo-passphrase
+      scopes: [orders:read, orders:write]
+    - username: bob
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$3IKM9glW7HMgd/uYcK75jQ$dOgDqnTDKhXs2eV8zoziFNMsPYyjW7ZkYCYVA6YcVLY"     # DEMO password: bob-demo-passphrase
+      scopes: [orders:read]

@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: session-auth
+  # No datasource URL: Spring Boot starts an in-memory H2 database with a unique name (DEMO ONLY).
+  jpa:
+    hibernate:
+      ddl-auto: validate          # schema.sql owns the schema; Hibernate only checks it
+    open-in-view: false
+
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m                # idle timeout, enforced by the container (absolute timeout: auth.session)
+      tracking-modes: cookie      # never ;jsessionid=... in URLs (leaks via logs, Referer, shared links)
+      cookie:
+        name: SESSION             # neutral name; the prod profile uses the __Host- prefix
+        http-only: true           # scripts cannot read it, so XSS cannot exfiltrate the session ID
+        same-site: lax            # not sent on cross-site POSTs or subresource requests
+        secure: false             # local http://localhost only; the prod profile turns this on
+        # no domain: a host-only cookie is never sent to sibling subdomains
+
+auth:
+  session:
+    maximum-per-user: 3
+    absolute-timeout: 8h
+  login-throttle:
+    max-failures-per-user-and-ip: 5
+    max-failures-per-user: 20
+    max-failures-per-ip: 50
+    initial-block: 30s
+    max-block: 15m
+    forget-after: 1h
+  password:
+    hibp-check-enabled: false     # offline-friendly default; enabled in prod
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  # TLS ends at the load balancer. "native" lets Tomcat's RemoteIpValve take X-Forwarded-For/-Proto
+  # only from trusted (internal) proxy addresses, so request.isSecure() and the client IP used for
+  # throttling are correct and cannot be spoofed by clients that reach the app directly.
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        # __Host- prefix: the browser only accepts it with Secure, Path=/ and no Domain, so neither
+        # plain HTTP nor a sibling subdomain can plant or overwrite the session cookie.
+        name: __Host-SESSION
+        secure: true
+
+auth:
+  password:
+    hibp-check-enabled: true
