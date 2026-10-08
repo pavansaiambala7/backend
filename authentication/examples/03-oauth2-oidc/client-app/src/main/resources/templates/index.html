@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BFF demo</title>
+</head>
+<body>
+<main>
+    <h1>Signed in as <span th:text="${name}">Alice Anderson</span></h1>
+    <p>
+        Subject <code th:text="${subject}">alice</code>
+        at issuer <code th:text="${issuer}">http://localhost:9000</code>
+    </p>
+
+    <ul>
+        <li><a href="/api/me">/api/me</a>: who you are, as JSON (no tokens in it)</li>
+        <li><a href="/api/orders">/api/orders</a>: your orders, fetched by this server from the
+            resource server with your access token</li>
+    </ul>
+
+    <p>This browser holds only an HttpOnly session cookie. The access, refresh and ID tokens stay on the server.</p>
+
+    <!-- POST with the CSRF token (Thymeleaf adds the hidden _csrf field to th:action forms). -->
+    <form th:action="@{/logout}" method="post">
+        <button type="submit">Sign out</button>
+    </form>
+</main>
+</body>
+</html>

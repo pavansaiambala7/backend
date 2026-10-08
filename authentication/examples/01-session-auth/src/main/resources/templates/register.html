@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Create an account</h1>
+
+    <form method="post" th:action="@{/register}" th:object="${form}">
+        <label for="email">Email</label>
+        <input id="email" type="email" th:field="*{email}" autocomplete="username" required>
+        <p class="error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Email error</p>
+
+        <label for="password">Password</label>
+        <!-- No th:field here: the password is never echoed back into the page. -->
+        <input id="password" name="password" type="password" autocomplete="new-password" required>
+        <p class="error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Password error</p>
+        <!-- NIST SP 800-63B-4: give guidance, allow paste and password managers, no composition rules. -->
+        <p class="hint">
+            At least <span th:text="${minPasswordLength}">15</span> characters. Any characters are fine,
+            including spaces. A few unrelated words or a password manager work well.
+        </p>
+
+        <button type="submit">Register</button>
+    </form>
+
+    <p>Already registered? <a th:href="@{/login}">Sign in</a></p>
+</main>
+</body>
+</html>

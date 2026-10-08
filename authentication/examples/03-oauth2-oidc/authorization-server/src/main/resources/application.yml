@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: authorization-server
+
+server:
+  port: 9000
+  servlet:
+    session:
+      timeout: 30m
+      tracking-modes: cookie
+      cookie:
+        # Own cookie name: browsers do not separate cookies by port, so on one development machine the
+        # authorization server and the client app would otherwise overwrite each other's JSESSIONID.
+        name: AS_SESSION
+        http-only: true
+        # Lax, not Strict: the user arrives at /oauth2/authorize through a cross-site top-level
+        # navigation from the client app, and the login session must be visible on that request.
+        same-site: lax
+        secure: false             # http://localhost in development; the prod profile turns it on
+
+authserver:
+  # The exact "iss" value. Clients and resource servers are configured with this same string.
+  issuer: http://localhost:9000
+  bff-client:
+    client-id: bff-client
+    # DEMO ONLY default. Set BFF_CLIENT_SECRET (from a secret manager) anywhere real.
+    client-secret: ${BFF_CLIENT_SECRET:bff-client-demo-secret}
+    redirect-uri: http://127.0.0.1:8080/login/oauth2/code/auth-server
+    post-logout-redirect-uri: http://127.0.0.1:8080/logged-out
+  service-client:
+    client-id: service-client
+    # DEMO ONLY default. Set SERVICE_CLIENT_SECRET anywhere real.
+    client-secret: ${SERVICE_CLIENT_SECRET:service-client-demo-secret}
+  tokens:
+    access-token-ttl: 10m         # short-lived: a JWT cannot be revoked before it expires
+    refresh-token-ttl: 8h         # bounded login; each use rotates it
+    authorization-code-ttl: 2m    # codes are redeemed within seconds; short limits replay windows
+  apis:
+    - audience: orders-api
+      scopes: orders.read
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        name: __Host-AS_SESSION
+        secure: true

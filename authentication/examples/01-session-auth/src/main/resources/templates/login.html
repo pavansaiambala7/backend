@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Sign in</h1>
+
+    <!-- One message for unknown email and wrong password alike: no account enumeration. -->
+    <p class="error" th:if="${param.error}">Invalid email or password.</p>
+    <p class="notice" th:if="${param.logout}">You have been signed out.</p>
+    <p class="notice" th:if="${param.expired}">Your session has ended. Please sign in again.</p>
+    <p class="notice" th:if="${param.registered}">Registration received. You can now sign in.</p>
+
+    <!-- th:action makes Spring Security add the hidden _csrf field (login forms need CSRF protection too). -->
+    <form method="post" th:action="@{/login}">
+        <label for="username">Email</label>
+        <input id="username" name="username" type="email" autocomplete="username" required autofocus>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button type="submit">Sign in</button>
+    </form>
+
+    <p>No account yet? <a th:href="@{/register}">Register</a></p>
+</main>
+</body>
+</html>
