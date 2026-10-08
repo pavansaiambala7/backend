@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Enter your code</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Enter your code</h1>
+    <p class="step">Step 2 of 2: authenticator app</p>
+
+    <!-- Same message for wrong, expired and already used codes. -->
+    <p class="error" th:if="${param.error}">Invalid or already used code. Wait for the next code and try again.</p>
+
+    <form method="post" th:action="@{/login/totp}">
+        <label for="code">6-digit code from your authenticator app</label>
+        <input id="code" name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"
+               autocomplete="one-time-code" required autofocus>
+        <button type="submit">Verify</button>
+    </form>
+
+    <p>Lost your phone? <a th:href="@{/login/recovery-code}">Use a recovery code</a></p>
+
+    <form method="post" th:action="@{/logout}">
+        <button type="submit" class="link-button">Cancel and sign out</button>
+    </form>
+</main>
+</body>
+</html>

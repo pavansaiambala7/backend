@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: api-keys-hmac
+  # No datasource URL: Spring Boot starts an in-memory H2 database (DEMO ONLY) and runs schema.sql.
+  mvc:
+    problemdetails:
+      enabled: true               # RFC 9457 bodies for MVC errors (validation, 404, ...)
+
+server:
+  port: 8085
+
+api-keys:
+  environment: live               # keys look like ak_live_...; a staging deployment would use "test" (ak_test_...)
+  # Pepper (base64, >= 32 bytes) used to hash keys at rest. The fallback after ':' is a DEMO ONLY value.
+  # In production set API_KEYS_PEPPER from a secret manager or KMS and remove the fallback. Generate one with:
+  #   openssl rand -base64 32
+  pepper: "${API_KEYS_PEPPER:REVNTyBPTkxZIHBlcHBlciAtIG5ldmVyIHVzZSBpbiBwcm9k}"
+  scopes: [orders:read, orders:write]
+  default-lifetime: 90d
+  max-lifetime: 365d
+  rotation-overlap: 24h           # old key keeps working this long after a rotation
+  last-used-granularity: 1m       # write last_used_at at most once a minute per key
+
+webhooks:
+  payments:
+    # Endpoint secret shared with the payment provider; the fallback is a DEMO ONLY value. In production set
+    # PAYMENTS_WEBHOOK_SECRET from a secret manager. While rotating, list the new and the old secret here.
+    secrets:
+      - "${PAYMENTS_WEBHOOK_SECRET:whsec_demo_only_not_a_real_secret}"
+    tolerance: 5m
+    max-body-size: 64KB
+
+# DEMO ONLY administrators: a stand-in for your real dashboard login. Hashes are Argon2id (m=19456 KiB, t=2, p=1).
+admin:
+  accounts:
+    - username: acme-admin
+      owner: acme
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$qJ3Ia1+iI8gSzeLoDusWrw$tQxPjIo8CKokFRYeHejKZxbfD9mRr5I1gNFSNyRd9e8"     # DEMO password: acme-admin-demo-passphrase
+    - username: globex-admin
+      owner: globex
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$mW9sZksWW77VRT9yRQdK6A$RlHwqJZPMKwd4gd5Modv9XX+Uop4Bagd/kjf4uRCPtA"   # DEMO password: globex-admin-demo-passphrase

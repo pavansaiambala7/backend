@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Set up two-step verification</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Set up two-step verification</h1>
+    <p>This account needs a second factor. You will need an authenticator app such as Google Authenticator,
+        Microsoft Authenticator, 1Password or Bitwarden.</p>
+
+    <form method="post" th:action="@{/mfa/totp/enroll}">
+        <button type="submit">Create a secret for my app</button>
+    </form>
+</main>
+</body>
+</html>

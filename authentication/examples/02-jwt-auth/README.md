@@ -76,7 +76,7 @@ sequenceDiagram
 
     Note over C,A: About 15 minutes later the access token expires
     C->>A: POST /auth/refresh, Cookie RT1 + X-CSRF-Protection
-    A->>DB: SELECT ... FOR UPDATE by SHA-256(RT1); mark RT1 used
+    A->>DB: SELECT ... FOR UPDATE by SHA-256(RT1), then mark RT1 used
     A->>DB: Insert SHA-256(RT2), same family F, parent RT1
     A-->>C: 200 new access token + Set-Cookie RT2
 

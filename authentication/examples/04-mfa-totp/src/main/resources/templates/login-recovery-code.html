@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Use a recovery code</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Use a recovery code</h1>
+    <p class="step">Step 2 of 2: recovery code</p>
+    <p>Each recovery code works once. After signing in, generate new codes or set up your authenticator again.</p>
+
+    <p class="error" th:if="${param.error}">Invalid or already used recovery code.</p>
+
+    <form method="post" th:action="@{/login/recovery-code}">
+        <label for="code">Recovery code</label>
+        <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false"
+               maxlength="32" required autofocus>
+        <button type="submit">Verify</button>
+    </form>
+
+    <p><a th:href="@{/login/totp}">Use your authenticator app instead</a></p>
+</main>
+</body>
+</html>

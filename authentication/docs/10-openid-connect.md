@@ -196,7 +196,7 @@ OIDC Core section 3.1.3.7 defines the procedure. Use a well-tested, OpenID-certi
 1. **Decrypt** if the ID token is encrypted (only if you registered for encryption).
 2. **`iss`** must exactly equal the issuer you trust for this flow (from discovery). For multi-tenant providers, see [section 13](#13-social-login-google-microsoft-apple).
 3. **`aud`** must contain your `client_id`. Reject the token if `aud` contains audiences you do not trust.
-4. If there are several audiences, check `azp`. If `azp` is present, it must equal your `client_id`.
+4. If there are several audiences, check `azp`. If `azp` is present, it must equal your `client_id`. (Errata set 2 made `azp` checking depend on the extensions in use, but this strict rule is a safe default and is what Spring Security enforces.)
 5. **Signature**: verify it with the OP's key from the **JWKS** published at the discovery document's `jwks_uri`, selected by `kid`. The algorithm must be on your allowlist and must be the one registered for your client (default `RS256`). Never accept `alg: none`. Never let the token header choose the key (`jku`, `x5u`, embedded `jwk`) or switch algorithm families (for example HS256 verified with an RSA public key used as an HMAC secret). The spec allows skipping signature checks for ID tokens received directly from the token endpoint over TLS. **Verify anyway**: it is cheap, and tokens get passed around later.
 6. **`exp`**: the current time must be before `exp` (allow a small clock skew, for example 60 seconds).
 7. **`iat`**: reject tokens issued too far in the past, according to your policy.
@@ -284,7 +284,7 @@ Location: https://app.example.com/login/oauth2/code/example?code=SplxlOBeZQQYbYS
 
 The RP checks `state` (CSRF) and `iss` (mix-up), as in [chapter 08](08-oauth-2.md#4-the-authorization-code-grant-step-by-step).
 
-OIDC-specific errors you may see: `login_required`, `consent_required`, `interaction_required` and `account_selection_required` (all returned when `prompt=none` was sent and the OP cannot complete silently).
+OIDC-specific errors you may see: `login_required`, `consent_required`, `interaction_required` and `account_selection_required` (typically returned when `prompt=none` was sent and the OP cannot complete silently).
 
 ### Step 3 — Token request
 
@@ -703,7 +703,7 @@ Cache-Control: no-store
 
 Return `400 Bad Request` if validation fails. The spec notes that some frameworks send `204 No Content` for an empty success response, and OPs should treat that as success too.
 
-**Implementation consequences:** you need to find sessions by `sid` or `sub`, so store `sid` with each session (Spring Security keeps an OIDC session registry for this). With several app instances, use a shared session store such as Spring Session with Redis, so that a logout received by one instance kills the session everywhere.
+**Implementation consequences:** you need to find sessions by `sid` or `sub`, so store `sid` with each session (Spring Security keeps an `OidcSessionRegistry` for this, in memory by default). With several app instances, use a shared session store such as Spring Session with Redis **and** provide a shared `OidcSessionRegistry` bean, so that a logout received by one instance finds and kills the session everywhere.
 
 ---
 
@@ -918,7 +918,7 @@ class WebSecurityConfig {
 
     @Bean
     SecurityFilterChain web(HttpSecurity http, ClientRegistrationRepository registrations) throws Exception {
-        // PKCE for confidential clients too (public clients get it automatically)
+        // Explicit PKCE. Spring Security 7 already sends it for every registration (requireProofKey defaults to true)
         var authorizationRequestResolver = new DefaultOAuth2AuthorizationRequestResolver(
                 registrations, OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI);
         authorizationRequestResolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
@@ -989,7 +989,7 @@ class MeController {
 Notes:
 
 - The `issuer-uri` triggers discovery at startup and makes Spring require an exact `iss` match. For multi-tenant Entra apps, add a custom ID token validator that checks `iss` against `tid` and your tenant allowlist.
-- Back-channel logout needs the OP to reach `https://app.example.com/logout/connect/back-channel/example`. With several app instances, use Spring Session (for example with Redis) so the logout reaches every instance.
+- Back-channel logout needs the OP to reach `https://app.example.com/logout/connect/back-channel/example`. With several app instances, use Spring Session (for example with Redis) plus a shared `OidcSessionRegistry` bean (the default registry is in memory), so the logout reaches every instance.
 - The [../examples/03-oauth2-oidc/](../examples/03-oauth2-oidc/) multi-module example runs a Spring Authorization Server with OIDC, a resource server, and this kind of BFF client using `oauth2Login`.
 
 ---

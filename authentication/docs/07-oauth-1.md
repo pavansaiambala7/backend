@@ -108,7 +108,7 @@ OAuth Core 1.0 and RFC 5849 use different names for the same things. You will se
 
 Two things stand out compared with OAuth 2.0:
 
-1. **Every token comes with a secret.** The token identifies the grant; the token secret is never sent over the wire and is used only as part of the signing key. With the HMAC and RSA methods, a captured access token alone is useless without its secret (PLAINTEXT is the exception, because it sends the secrets).
+1. **Every token comes with a secret.** The token identifies the grant; the token secret is never sent over the wire and is used only as part of the signing key. With the HMAC and RSA methods, a captured access token alone is useless: HMAC also needs the token secret and consumer secret, and RSA needs the consumer's private key (PLAINTEXT is the exception, because it sends the secrets).
 2. **One "service provider" role.** OAuth 1.0 did not separate the authorization server from the resource server. OAuth 2.0's split is what made central identity providers and many independent APIs practical.
 
 ---
@@ -138,7 +138,7 @@ sequenceDiagram
     SP-->>C: 200 OK, the photos
 ```
 
-The raw HTTP below uses the example from RFC 5849 Section 1.2: a printing service (`printer.example.com`) accessing a user's private photos at `photos.example.net`. The client credentials are `dpf43f3p2l4k3l03` / `kd94hf93k423kf44`. All three signatures are real HMAC-SHA1 values for these inputs.
+The raw HTTP below uses the example from RFC 5849 Section 1.2: a printing service (`printer.example.com`) accessing a user's private photos at `photos.example.net`. The client credentials are `dpf43f3p2l4k3l03` / `kd94hf93k423kf44`. All three signatures are real HMAC-SHA1 values for these inputs. As in the RFC, steps 1 and 3 are sent over HTTPS, so their signature base strings use `https://photos.example.net/...`; the scheme is part of what is signed.
 
 ### Step 1: obtain temporary credentials (request token)
 
@@ -275,7 +275,7 @@ http://photos.example.net/photos
 | `oauth_timestamp` | `137131202` |
 | `oauth_nonce` | `chapoH` |
 
-**4. Normalize**: percent-encode every name and value (RFC 3986 rules, Section 5.4), sort by encoded name, then by encoded value for duplicate names, and join as `name=value` pairs with `&`:
+**4. Normalize**: percent-encode every name and value (RFC 3986 rules; see Section 5.4 below), sort by encoded name, then by encoded value for duplicate names, and join as `name=value` pairs with `&`:
 
 ```text
 file=vacation.jpg&oauth_consumer_key=dpf43f3p2l4k3l03&oauth_nonce=chapoH&oauth_signature_method=HMAC-SHA1&oauth_timestamp=137131202&oauth_token=nnch734d00sl2jdk&size=original
@@ -432,7 +432,7 @@ sequenceDiagram
     SP-->>C: RT, oauth_callback_confirmed=true
     A->>V: Link to the SP authorize URL with RT
     V->>SP: Approve
-    SP-->>V: Redirect to the registered callback with RT and oauth_verifier
+    SP-->>V: Redirect to the signed callback with RT and oauth_verifier
     V->>C: Callback with RT and verifier arrives in the victim's session
     C->>C: RT was not issued to this session, reject
     A->>C: Attacker tries to finish the flow without the verifier
@@ -519,14 +519,14 @@ As of 2026 you will still meet OAuth 1.0a (or OAuth 1.0-style signatures) in a f
 
 | Where | What to know |
 |---|---|
-| **X (formerly Twitter) API** | X still documents **OAuth 1.0a User Context** (three-legged and PIN-based flows) alongside OAuth 2.0 with PKCE, and some endpoints require it. New integrations should prefer OAuth 2.0 where X supports it for the endpoints they need. |
+| **X (formerly Twitter) API** | X still documents **OAuth 1.0a User Context** (three-legged and PIN-based flows) alongside OAuth 2.0 with PKCE, and some endpoints have required it. New integrations should prefer OAuth 2.0 where X supports it for the endpoints they need. |
 | **Flickr API** | Uses OAuth 1.0a for user authorization. |
 | **E-commerce and ERP platforms** | Adobe Commerce (Magento) integrations use OAuth 1.0a; WooCommerce's REST API uses one-legged OAuth 1.0a signatures when called over plain HTTP; Oracle NetSuite's Token-Based Authentication uses OAuth 1.0-style signed requests (with HMAC-SHA256). |
 | **Older enterprise integrations** | Server-to-server "application links" and partner integrations built around 2010 with RSA-SHA1. |
 
 If you must integrate with one of these:
 
-- Use a maintained library (in Java, for example ScribeJava, which supports OAuth 1.0a), not hand-written signing code.
+- Use a well-tested library, not hand-written signing code. In Java, ScribeJava supports OAuth 1.0a, but its last release (8.3.3) was in November 2022, so check its maintenance status (or use the provider's own SDK) before adopting it.
 - Use HTTPS anyway; OAuth 1.0a over TLS is a reasonable combination.
 - Store access tokens **and token secrets** encrypted at rest, treat them like passwords, and support revocation.
 - Keep client clocks synchronized (NTP), and log the base string on signature failures in non-production environments.

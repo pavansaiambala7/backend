@@ -112,7 +112,7 @@ OAuth 2.0 as published in 2012 was a flexible framework with many optional, and 
 
 ### 2.6 The attack catalog
 
-RFC 9700 also documents the attacks behind these rules: insufficient redirect URI validation, credential leakage via `Referer` and browser history, mix-up, code injection, access token injection, CSRF, PKCE downgrade, token leakage at compromised resource servers, misuse of stolen tokens, open redirection, 307 redirects, TLS-terminating proxies, refresh token theft, client impersonation of users, clickjacking, `postMessage` attacks, AS-assisted phishing redirects, and integrity of authorization requests. Each attack is explained with mitigations in [chapter 08, section 19](08-oauth-2.md#19-vulnerabilities-in-depth).
+RFC 9700 also documents the attacks behind these rules: insufficient redirect URI validation, credential leakage via `Referer` and browser history, mix-up, code injection, access token injection, CSRF, PKCE downgrade, token leakage at compromised resource servers, misuse of stolen tokens, open redirection, 307 redirects, TLS-terminating proxies, refresh token theft, client impersonation of users, clickjacking, `postMessage` attacks, and AS-assisted phishing redirects. Each attack is explained with mitigations in [chapter 08, section 19](08-oauth-2.md#19-vulnerabilities-in-depth).
 
 **How to use RFC 9700 in practice:** treat it as a checklist for every AS configuration and every client library you choose. If a vendor or library cannot meet a rule, document the exception and its compensating control.
 
@@ -965,7 +965,7 @@ Note the refresh token difference from this guide's general house position. Rota
 | Many grant types and endpoints | **One grant endpoint**. The client describes what it wants in a JSON request |
 | Clients pre-registered, identified by `client_id` | Clients identified by their **key**. Registration is optional |
 | Bearer tokens by default, binding bolted on | **Key-bound** requests and tokens by default |
-| Redirect-centric | **Interaction modes negotiated**: redirect, user code, app link, push |
+| Redirect-centric | **Interaction modes negotiated**: start by redirect, app or user code, finish by redirect or push |
 | Scopes plus RAR as an extension | Rich access descriptions built in, similar to RAR |
 | One access token per request | **Multiple access tokens** in one grant |
 | Identity layered on top (OIDC) | Subject information can be requested directly |
@@ -1086,7 +1086,7 @@ class AuthorizationServerConfig {
             .scope("orders.read")
             .scope("orders.write")
             .clientSettings(ClientSettings.builder()
-                .requireProofKey(true)                                          // PKCE required
+                .requireProofKey(true)                                          // PKCE required (also the default)
                 .requireAuthorizationConsent(false)                             // first-party client
                 .jwkSetUrl("https://app.example.com/.well-known/jwks.json")     // client's public keys
                 .tokenEndpointAuthenticationSigningAlgorithm(SignatureAlgorithm.ES256)

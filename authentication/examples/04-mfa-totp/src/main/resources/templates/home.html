@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Account</h1>
+    <p>Signed in as <strong id="username" th:text="${username}">alice</strong>.</p>
+
+    <p class="warning" th:if="${usedRecoveryCode}">You signed in with a recovery code. If you lost your authenticator,
+        generate new recovery codes now and ask an administrator to reset your authenticator.</p>
+
+    <h2>Factors in this session</h2>
+    <ul>
+        <li th:each="factor : ${factors}" class="factor">
+            <code th:text="${factor.authority()}">FACTOR_PASSWORD</code>
+            at <span th:text="${factor.issuedAt()}">2026-01-01T00:00:00Z</span>
+        </li>
+    </ul>
+
+    <h2>Recovery codes</h2>
+    <p><span id="recovery-codes-left" th:text="${recoveryCodesLeft}">10</span> unused recovery codes left.</p>
+    <form method="post" th:action="@{/mfa/recovery-codes}">
+        <button type="submit">Generate new recovery codes</button>
+    </form>
+
+    <form method="post" th:action="@{/logout}">
+        <button type="submit">Sign out</button>
+    </form>
+</main>
+</body>
+</html>

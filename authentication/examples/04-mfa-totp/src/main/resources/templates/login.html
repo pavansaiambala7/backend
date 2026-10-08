@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Sign in</h1>
+    <p class="step">Step 1 of 2: password</p>
+
+    <!-- One message for unknown user and wrong password alike: no account enumeration. -->
+    <p class="error" th:if="${param.error}">Invalid username or password.</p>
+    <p class="notice" th:if="${param.logout}">You have been signed out.</p>
+    <!-- Spring Security adds factor.type/factor.reason when it sends a signed-in user back for a factor. -->
+    <p class="notice" th:if="${param['factor.reason'] != null}">The second step took too long. Please enter your password again.</p>
+
+    <!-- th:action makes Spring Security add the hidden _csrf field (login forms need CSRF protection too). -->
+    <form method="post" th:action="@{/login}">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required autofocus>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button type="submit">Continue</button>
+    </form>
+</main>
+</body>
+</html>

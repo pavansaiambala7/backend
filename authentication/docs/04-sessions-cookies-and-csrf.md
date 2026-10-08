@@ -180,7 +180,7 @@ Prefixes are enforced by the browser: a `Set-Cookie` that breaks the rules is **
 
 ### 4.4 Third-party cookie context
 
-Browsers increasingly restrict cookies in cross-site contexts (Safari and Firefox block most third-party cookies by default; Chrome kept them available but with user controls and partitioning options). For authentication this means: do not design login flows that depend on third-party cookies in iframes (classic "silent SSO in a hidden iframe" breaks). Use top-level redirects, the [BFF pattern](10-openid-connect.md), and first-party cookies.
+Browsers increasingly restrict cookies in cross-site contexts (Safari blocks third-party cookies by default, Firefox partitions them per top-level site with Total Cookie Protection and blocks known trackers, and Chrome kept them available but with user controls and partitioning options). For authentication this means: do not design login flows that depend on third-party cookies in iframes (classic "silent SSO in a hidden iframe" breaks). Use top-level redirects, the [BFF pattern](10-openid-connect.md), and first-party cookies.
 
 ---
 
@@ -248,7 +248,7 @@ A session must end even if the user never clicks "log out".
 | OWASP, low-risk apps | 15–30 minutes | Same |
 | NIST SP 800-63B-4 (2025), AAL1 | Optional | No more than 30 days (recommended) |
 | NIST SP 800-63B-4, AAL2 (typical MFA-protected app) | No more than 1 hour (recommended) | No more than 24 hours (recommended) |
-| NIST SP 800-63B-4, AAL3 | No more than 15 minutes (recommended) | No more than 12 hours (recommended) |
+| NIST SP 800-63B-4, AAL3 | No more than 15 minutes (recommended) | No more than 12 hours (**required**, "SHALL") |
 
 Practical defaults for a business web app in 2026: **idle 30 minutes, absolute 8–12 hours**, plus **re-authentication** (password or passkey prompt) before sensitive actions such as changing email, password, MFA settings, or payout details — regardless of session age. Enforce both timeouts **server-side**; a cookie `Max-Age` is only a hint the browser can ignore or an attacker can change.
 
@@ -348,7 +348,7 @@ Two approaches:
 
 | Approach | Cookie contents | Verdict |
 |---|---|---|
-| Simple hash-based (Spring `TokenBasedRememberMeServices`) | `username:expiry:signature`, where the signature is a hash over the username, expiry, password hash, and a server key | Stateless, but cannot revoke one device; changing the password revokes all. Acceptable for low-risk apps. |
+| Simple hash-based (Spring `TokenBasedRememberMeServices`) | `username:expiry:algorithm:signature` (base64-encoded), where the signature is a hash (SHA-256 by default) over the username, expiry, password hash, and a server key | Stateless, but cannot revoke one device; changing the password revokes all. Acceptable for low-risk apps. |
 | **Persistent token** (Spring `PersistentTokenBasedRememberMeServices`) | `series:token`, both random; stored server-side | **Recommended**: per-device revocation and theft detection. |
 
 The persistent token approach (based on Barry Jaspan's "improved persistent login cookie" design):
@@ -701,9 +701,10 @@ class WebSecurityConfig {
                 .permitAll())
             .sessionManagement(session -> session
                 .sessionFixation(fixation -> fixation.changeSessionId())   // the default, made explicit
-                .maximumSessions(3)
+                .sessionConcurrency(concurrency -> concurrency
+                    .maximumSessions(3)
                     .maxSessionsPreventsLogin(false)                      // oldest session is expired
-                    .expiredUrl("/login?expired"))
+                    .expiredUrl("/login?expired")))
             .rememberMe(remember -> remember
                 .tokenRepository(rememberMeTokens)                        // persistent-token approach
                 .tokenValiditySeconds((int) Duration.ofDays(14).toSeconds())
@@ -807,8 +808,9 @@ Wire the registry into the filter chain:
 
 ```java
 .sessionManagement(session -> session
-    .maximumSessions(3)
-        .sessionRegistry(sessionRegistry))
+    .sessionConcurrency(concurrency -> concurrency
+        .maximumSessions(3)
+        .sessionRegistry(sessionRegistry)))
 ```
 
 "Log out of all devices" (call it after a password change or MFA reset too):

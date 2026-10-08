@@ -204,7 +204,7 @@ The Lightweight Directory Access Protocol (RFC 1487 in 1993; LDAPv3 in RFC 2251,
 
 ### 5.4 RADIUS: authentication for network access
 
-RADIUS (RFC 2058 in January 1997, revised by RFC 2138 the same year and RFC 2865 in 2000) authenticates users for dial-up, VPN, Wi-Fi (802.1X) and network devices, and introduced the AAA model (authentication, authorization, accounting) still used today.
+RADIUS (RFC 2058 in January 1997, revised by RFC 2138 the same year and RFC 2865 in 2000) authenticates users for dial-up, VPN, Wi-Fi (802.1X) and network devices, and became the classic example of the AAA model (authentication, authorization, accounting) still used today.
 
 **What broke it:** its integrity protection relies on MD5 and a shared secret. In July 2024 the **Blast-RADIUS** attack (CVE-2024-3596) showed that a network attacker could use an MD5 chosen-prefix collision to turn an `Access-Reject` into an `Access-Accept` for deployments over UDP without the Message-Authenticator attribute. The fix is to require Message-Authenticator and move to RADIUS over TLS.
 
@@ -397,7 +397,7 @@ Proof Key for Code Exchange (RFC 7636, September 2015) makes the client create a
 | 2025 | **RFC 9700, OAuth 2.0 Security Best Current Practice** (BCP 240, January) | The consolidated security rules: PKCE, exact redirect matching, no implicit, no password grant, refresh token protection |
 | 2025 | FAPI 2.0 Security Profile (OpenID Foundation, final in February) | High-security profile for open banking and similar APIs |
 | 2025 | RFC 9728, Protected Resource Metadata | APIs advertise which authorization servers they trust |
-| 2026 | RFC 10017, OAuth 2.0 for Browser-Based Applications (BCP, August) | Compares SPA architectures (BFF, token-mediating backend, browser-only client) and their threats; the BFF keeps tokens out of the browser entirely |
+| 2026 | RFC 10017, OAuth 2.0 for Browser-Based Applications (BCP 212, August) | Compares SPA architectures (BFF, token-mediating backend, browser-only client) and their threats; the BFF keeps tokens out of the browser entirely |
 
 ### 10.2 OAuth 2.1: consolidation, still a draft
 
@@ -473,11 +473,11 @@ See [service-to-service and zero trust](12-service-to-service-and-zero-trust.md)
 
 ### 13.1 Why browsers got involved
 
-Classic federation relies on redirects, iframes and cookies shared across sites. The same mechanisms enable cross-site tracking, so browsers started restricting **third-party cookies** and partitioning storage (Safari and Firefox block them by default). That broke some identity features, such as silent token renewal in hidden iframes and some front-channel logout designs. Chrome ultimately decided not to remove third-party cookies (announced in 2024 and confirmed in April 2025), but the work produced new identity-specific browser APIs.
+Classic federation relies on redirects, iframes and cookies shared across sites. The same mechanisms enable cross-site tracking, so browsers started restricting **third-party cookies** and partitioning storage (Safari blocks them by default; Firefox partitions them per site by default). That broke some identity features, such as silent token renewal in hidden iframes and some front-channel logout designs. Chrome ultimately decided not to remove third-party cookies (announced in 2024 and confirmed in April 2025), but the work produced new identity-specific browser APIs.
 
 ### 13.2 FedCM
 
-The **Federated Credential Management API** (FedCM) lets the *browser* mediate "Sign in with an IdP" with its own account chooser, without third-party cookies and without the IdP learning which sites you visit until you choose to sign in. It shipped in Chrome 108 (late 2022) and is used by major IdPs, with a fallback to classic redirect-based OAuth/OIDC. As of October 2026 it is a W3C Working Draft in the Federated Identity Working Group, supported in Chromium-based browsers but **not** in Firefox or Safari.
+The **Federated Credential Management API** (FedCM) lets the *browser* mediate "Sign in with an IdP" with its own account chooser, without third-party cookies and without the IdP learning which sites you visit until you choose to sign in. It shipped in Chrome 108 (late 2022) and is used by major IdPs, with a fallback to classic redirect-based OAuth/OIDC. It is a W3C Working Draft in the Federated Identity Working Group (first published August 2024) and, as of October 2026, is supported in Chromium-based browsers but **not** in Firefox or Safari.
 
 ### 13.3 What else is emerging
 
@@ -564,7 +564,7 @@ The end state is **public-key authentication everywhere**: nothing the server st
 Bearer credentials (passwords, cookies, bearer tokens, OTP codes) work for *anyone* who holds them. The fixes bind them:
 
 - **To the origin:** FIDO/WebAuthn signatures include the origin; `SameSite` cookies are not sent on cross-site requests; OIDC `aud` and SAML audience restrictions stop tokens from being replayed to other applications.
-- **To the sender:** PKCE binds a code to the client instance; mTLS (RFC 8705) and DPoP (RFC 9449) bind tokens to a private key; the 2012 SAML attacks and the 2016 OAuth mix-up attacks were both about responses being accepted by the wrong party.
+- **To the sender:** PKCE binds a code to the client instance; mTLS (RFC 8705) and DPoP (RFC 9449) bind tokens to a private key; the 2016 OAuth mix-up attacks were about a client accepting a response from (or sending a code to) the wrong authorization server, which the `iss` response parameter (RFC 9207) now prevents.
 
 ### 15.3 Separate authentication from authorization
 
@@ -632,7 +632,7 @@ The implicit grant, the password grant, SHA-1, RC4, TLS 1.0, SMS OTP: each lived
 
 ## 18. Spring Boot 4 / Spring Security 7: the eras in one framework
 
-Spring Security has accumulated support for most of this history, which makes it a good map from concepts to code. Since Spring Security 7, every `Authentication` also carries a **factor authority** that records *how* the user authenticated (for example `FACTOR_PASSWORD`, `FACTOR_WEBAUTHN`, `FACTOR_X509`, `FACTOR_OTT`, `FACTOR_SAML_RESPONSE`, `FACTOR_AUTHORIZATION_CODE`, `FACTOR_BEARER`), and `@EnableMultiFactorAuthentication` can require more than one of them.
+Spring Security has accumulated support for most of this history, which makes it a good map from concepts to code. Since Spring Security 7, each built-in authentication mechanism also adds a **factor authority** to the `Authentication` that records *how* the user authenticated (for example `FACTOR_PASSWORD`, `FACTOR_WEBAUTHN`, `FACTOR_X509`, `FACTOR_OTT`, `FACTOR_SAML_RESPONSE`, `FACTOR_AUTHORIZATION_CODE`, `FACTOR_BEARER`), and `@EnableMultiFactorAuthentication` can require more than one of them.
 
 | Era | Mechanism | Spring Security 7 DSL (lambda style) |
 |---|---|---|
@@ -679,7 +679,7 @@ class ModernLoginConfig {
 }
 ```
 
-This assumes a `UserDetailsService` and a `PasswordEncoder` bean (see [chapter 02](02-passwords-and-credential-storage.md)); without configured repositories, Spring keeps WebAuthn credentials in memory, which is only suitable for demos. Runnable, era-specific examples:
+This assumes a `UserDetailsService` and a `PasswordEncoder` bean (see [chapter 02](02-passwords-and-credential-storage.md)) and the `org.springframework.security:spring-security-webauthn` dependency (version managed by Spring Boot); without configured repositories, Spring keeps WebAuthn credentials in memory, which is only suitable for demos. Runnable, era-specific examples:
 
 - Form login, sessions, Argon2id, CSRF, fixation, throttling: [../examples/01-session-auth/](../examples/01-session-auth/)
 - JWT access tokens, rotating refresh tokens, JWKS: [../examples/02-jwt-auth/](../examples/02-jwt-auth/)

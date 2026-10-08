@@ -79,7 +79,7 @@ Cache-Control: no-store
 {"type":"about:blank","title":"Unauthorized","status":401}
 ```
 
-A server may offer several challenges, either in multiple `WWW-Authenticate` headers or comma-separated in one. The client picks the strongest scheme it supports. The `realm` parameter names a "protection space": credentials that work for one realm are not assumed to work for another.
+A server may offer several challenges, either in multiple `WWW-Authenticate` headers or comma-separated in one. The client typically picks the strongest scheme it supports. The `realm` parameter names a "protection space": credentials that work for one realm are not assumed to work for another.
 
 ### 1.2 401 versus 403 (and 404)
 
@@ -239,7 +239,7 @@ response = SHA256(HA1 + ":" + nonce + ":" + "00000001" + ":" + cnonce + ":" + "a
          = 753927fa0e85d155564e2e272a28d1802ca10daf4496794697cf8db5856cb6c1
 ```
 
-RFC 7616 added SHA-256 and SHA-512/256 (MD5 is kept only for backward compatibility), a `userhash` option to hide the username, and `qop=auth-int` to also hash the body.
+RFC 7616 added SHA-256 and SHA-512/256 (MD5 is kept only for backward compatibility), a `userhash` option to hide the username, and a `charset` parameter for UTF-8 credentials. `qop=auth-int`, which also hashes the body, already existed in RFC 2617.
 
 ### 3.3 Why Digest faded
 
@@ -540,7 +540,7 @@ sequenceDiagram
     participant S as Server (holds same secret)
     participant N as Nonce cache (Redis)
     Note over C: Build canonical request: method, path, sorted query, signed headers, SHA-256 of body
-    Note over C: string-to-sign = algorithm, timestamp, nonce, hash of canonical request
+    Note over C: string-to-sign = algorithm, timestamp, hash of canonical request (nonce is a signed header)
     Note over C: signature = HMAC-SHA256(secret, string-to-sign)
     C->>S: POST /v1/transfers + key id, timestamp, nonce, signature headers
     S->>S: Reject if timestamp outside plus or minus 5 minutes
@@ -878,7 +878,7 @@ if (expectedSignatureHex.equals(receivedSignatureHex)) { ... }
 if (MessageDigest.isEqual(expectedBytes, receivedBytes)) { ... }
 ```
 
-`java.security.MessageDigest.isEqual(byte[], byte[])` has been constant-time with respect to the contents since Java 6u17. It still returns quickly when **lengths** differ, which is fine because the length of an HMAC-SHA256 output (32 bytes) is public.
+`java.security.MessageDigest.isEqual(byte[], byte[])` has been constant-time with respect to the contents since Java 6u17. In current JDKs (including Java 21) its running time depends only on the length of the **first** argument, even when the lengths differ, so pass the expected value first. Length is not a secret here anyway: an HMAC-SHA256 output is always 32 bytes.
 
 ### 8.2 Rules
 
@@ -901,7 +901,7 @@ Password hash verification (`Argon2PasswordEncoder.matches`, `BCryptPasswordEnco
 | Status codes | `401` + `WWW-Authenticate` for missing/invalid credentials; `403` for authenticated-but-forbidden; `404` to hide cross-tenant resources. |
 | Basic | Only over TLS, only with high-entropy machine secrets, low request volume. Never for browser user login. |
 | Digest | Do not deploy for new systems. |
-| Bearer | `Authorization` header only; never in URLs. Access tokens 5–15 min; validate signature, `iss`, `aud`, `exp`; sender-constrain (DPoP/mTLS) for high-risk APIs. |
+| Bearer | `Authorization` header only; never in URLs. Access tokens 5–15 min; validate signature, `iss`, `aud`, `exp` (and `nbf`); sender-constrain (DPoP/mTLS) for high-risk APIs. |
 | API key entropy | >= 128 bits (256 bits default), CSPRNG, recognizable prefix, optional checksum. |
 | API key storage | HMAC-SHA-256 with a pepper in KMS (or SHA-256). Show once. Never log. |
 | API key lifecycle | Scopes, expiry (90 days to 1 year), two active keys for overlap rotation, instant revocation (cache TTL <= 60 s), last-used tracking, auto-expire after 90 days unused. |
@@ -965,7 +965,7 @@ class OpsSecurityConfig {
 }
 ```
 
-(For tools such as `curl` that rely on the challenge, keep the default entry point, which sends `WWW-Authenticate: Basic realm="Realm"`.)
+(Strictly, RFC 9110 requires a `WWW-Authenticate` challenge on every `401`; an entry point that sends a non-Basic challenge, as suggested in section 1.4, stays compliant without triggering the popup. For clients that send credentials only after a challenge, such as Java's `HttpClient` with an `Authenticator` or `curl --anyauth`, keep the default entry point, which sends `WWW-Authenticate: Basic realm="Realm"`. Plain `curl -u` sends Basic credentials preemptively and does not need it.)
 
 ### 11.2 API key authentication with `AuthenticationFilter`
 

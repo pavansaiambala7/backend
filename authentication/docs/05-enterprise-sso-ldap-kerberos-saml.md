@@ -133,9 +133,9 @@ Note that the **application never compares passwords itself**: the directory che
 | User naming | `sAMAccountName` (`alice`), `userPrincipalName` (`alice@corp.example.com`). AD accepts a simple bind with the UPN directly — no search needed. |
 | Groups | `memberOf` on users; nested groups are common. The matching rule OID `1.2.840.113556.1.4.1941` (`LDAP_MATCHING_RULE_IN_CHAIN`) resolves nesting in one query. |
 | Ports | 389 (LDAP + StartTLS), 636 (LDAPS), 3268/3269 (Global Catalog, forest-wide search). |
-| Signing and channel binding | Microsoft has pushed LDAP signing and LDAPS channel binding (advisory ADV190023, 2020) to stop relay attacks; newer Windows Server releases tighten defaults. Configure clients to support both. |
+| Signing and channel binding | Microsoft has pushed LDAP signing and LDAPS channel binding (advisory ADV190023, first published August 2019; the March 2020 updates added the channel-binding settings and audit events) to stop relay attacks; newer Windows Server releases tighten defaults. Configure clients to support both. |
 | Account state | Check `userAccountControl` flags (disabled, locked, password expired) — a bind already fails for disabled accounts, but group lookups do not. |
-| Cloud | Microsoft Entra ID does not expose classic LDAP; it federates with SAML/OIDC and provisions with SCIM. LDAP is mainly an on-premises or hybrid concern. |
+| Cloud | Microsoft Entra ID does not expose classic LDAP; it federates with SAML/OIDC and provisions with SCIM (the separate Microsoft Entra Domain Services offers a managed LDAP/Kerberos domain for legacy apps). LDAP is mainly an on-premises or hybrid concern. |
 
 ### 2.4 Transport security
 
@@ -173,7 +173,7 @@ Consequences range from account enumeration and data disclosure to authenticatio
 | Context | Characters to escape | Encoding |
 |---|---|---|
 | Search filter (RFC 4515) | `*` `(` `)` `\` NUL | `\2a` `\28` `\29` `\5c` `\00` |
-| Distinguished name (RFC 4514) | `,` `+` `"` `\` `<` `>` `;` `=`, plus a leading space or `#` and a trailing space | Backslash-escape (`\,`) or hex (`\2c`) |
+| Distinguished name (RFC 4514) | `,` `+` `"` `\` `<` `>` `;` and NUL, plus a leading space or `#` and a trailing space (many encoders, including OWASP's list, also escape `=`, which RFC 4514 permits) | Backslash-escape (`\,`) or hex (`\2c`, `\00`) |
 
 In Spring, use parameterized filters (`"(uid={0})"` in `FilterBasedLdapUserSearch` or `LdapBindAuthenticationManagerFactory`, which encode arguments), Spring LDAP's `LdapQueryBuilder` (`query().where("uid").is(input)`), or `LdapEncoder.filterEncode(input)`. Also validate input against an expected pattern (`^[a-zA-Z0-9._-]{1,64}$` for usernames).
 
@@ -961,7 +961,7 @@ Combined with SSO, SCIM gives the complete enterprise package customers expect: 
 | LDAP bind | Reject empty passwords; search-then-bind with escaped filters (RFC 4515); generic login errors; rate limiting |
 | LDAP service account | Read-only, scoped to needed subtrees, password in a secret manager, rotated |
 | New app auth | Federate with the IdP via OIDC or SAML instead of collecting corporate passwords |
-| Kerberos crypto | AES only; RC4 removed (Microsoft enforcement from July 2026); DES never |
+| Kerberos crypto | AES only; RC4 off by default (Microsoft enforcement from July 2026; remove any remaining explicit RC4 exceptions); DES never |
 | Kerberos accounts | gMSA for services; 25+ character random passwords otherwise; no pre-auth exemptions; Protected Users for admins |
 | Kerberos infrastructure | Domain controllers as tier 0; time sync within 5 minutes; reset `krbtgt` twice after suspected compromise and periodically; monitor 4768/4769 events |
 | SPNEGO | SPN matches the user-facing host name; keytab protected like a private key; eliminate NTLM fallback; create a session after success |

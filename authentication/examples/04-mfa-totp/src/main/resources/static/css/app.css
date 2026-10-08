@@ -1,0 +1,73 @@
+/* Served as a file rather than inline styles so the Content-Security-Policy can stay "default-src 'self'". */
+:root {
+    color-scheme: light dark;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+}
+
+main {
+    max-width: 32rem;
+    margin: 3rem auto;
+    padding: 0 1rem;
+}
+
+label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+}
+
+input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem;
+    font: inherit;
+}
+
+button {
+    margin-top: 1.25rem;
+    padding: 0.5rem 1.25rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+code {
+    overflow-wrap: anywhere;
+}
+
+.step {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.error {
+    color: #b3261e;
+}
+
+.notice {
+    color: #146c2e;
+}
+
+.warning {
+    border-left: 4px solid #b3261e;
+    padding-left: 0.75rem;
+}
+
+.recovery-codes {
+    font-family: ui-monospace, monospace;
+    font-size: 1.1rem;
+    columns: 2;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: LinkText;
+    text-decoration: underline;
+}
+
+.hint {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}

@@ -363,7 +363,7 @@ Pragma: no-cache
 | Token endpoint error | HTTP status | Meaning |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request |
-| `invalid_client` | 401 (with `WWW-Authenticate` if the client used the `Authorization` header) | Client authentication failed |
+| `invalid_client` | 400 or 401 (401 with `WWW-Authenticate` is required if the client authenticated with the `Authorization` header) | Client authentication failed |
 | `invalid_grant` | 400 | Code or refresh token invalid, expired, revoked, used, or issued to another client. Also redirect URI mismatch and PKCE failure |
 | `unauthorized_client` | 400 | Client not allowed to use this grant type |
 | `unsupported_grant_type` | 400 | AS does not support it |
@@ -889,7 +889,7 @@ The decoded assertion:
 
 The AS checks the signature against the client's registered keys, `iss` and `sub` equal the `client_id`, `aud` identifies this AS, `exp` is in the near future (lifetimes of about 60 seconds are typical), and `jti` has not been seen before (keep a replay cache until `exp`).
 
-> **Audience note (2025-2026).** RFC 7523 allowed several audience values, including the token endpoint URL. In January 2025, University of Stuttgart researchers disclosed an "audience injection" attack that exploits that ambiguity when a client talks to more than one AS. The IETF draft `draft-ietf-oauth-rfc7523bis` (submitted to the IESG in 2026, not yet an RFC at the time of writing) requires the AS's **issuer identifier** as the **single** `aud` value for client authentication. New implementations should send the issuer identifier as a plain string, and authorization servers should accept it.
+> **Audience note (2025-2026).** RFC 7523 allowed several audience values, including the token endpoint URL. In January 2025, University of Stuttgart researchers disclosed an "audience injection" attack that exploits that ambiguity when a client talks to more than one AS. The IETF draft `draft-ietf-oauth-rfc7523bis` (an OAuth working group Internet-Draft, not yet an RFC at the time of writing) requires the AS's **issuer identifier** as the **single** `aud` value for client authentication. New implementations should send the issuer identifier as a plain string, and authorization servers should accept it.
 
 ### tls_client_auth and self_signed_tls_client_auth (RFC 8705)
 
@@ -1371,7 +1371,7 @@ Use this when a logged-in user connects a third-party account (for example "conn
 @Bean
 SecurityFilterChain web(HttpSecurity http, ClientRegistrationRepository registrations) throws Exception {
     var resolver = new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
-    resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce()); // PKCE for confidential clients too
+    resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce()); // explicit PKCE (already the Spring Security 7 default)
 
     http
         .authorizeHttpRequests(auth -> auth
@@ -1384,7 +1384,7 @@ SecurityFilterChain web(HttpSecurity http, ClientRegistrationRepository registra
 }
 ```
 
-Spring Security generates and checks `state`, stores the authorization request in the session, and redeems the code. Public clients (`client-authentication-method: none`) get PKCE automatically. Newer versions also offer a per-registration `requireProofKey` client setting. Set PKCE explicitly as above rather than relying on version-specific defaults.
+Spring Security generates and checks `state`, stores the authorization request in the session, and redeems the code. In Spring Security 7, every client registration sends PKCE by default: the per-registration `ClientSettings.requireProofKey` setting defaults to `true`, and public clients (`client-authentication-method: none`) always get PKCE. The explicit `withPkce()` customizer above is therefore redundant but harmless (it does nothing when a challenge is already present), and it keeps PKCE on even if someone sets `requireProofKey(false)`.
 
 ### 23.3 Resource server validating JWT access tokens
 

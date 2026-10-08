@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: mfa-totp
+  # No datasource URL: Spring Boot starts an in-memory H2 database with a unique name (DEMO ONLY).
+  # schema.sql creates the MFA tables at startup.
+
+server:
+  port: 8084
+  servlet:
+    session:
+      timeout: 30m                # idle timeout of the whole session
+      tracking-modes: cookie      # never ;jsessionid=... in URLs
+      cookie:
+        name: SESSION
+        http-only: true           # scripts cannot read the session ID
+        same-site: lax            # not sent on cross-site POSTs
+        secure: false             # local http://localhost only; the prod profile turns this on
+
+mfa:
+  totp:
+    issuer: Auth Guide Demo       # shown in the authenticator app
+    allowed-drift-steps: 1        # accept codes from the previous and next 30-second step (RFC 6238 recommends at most 1)
+  second-factor:
+    timeout: 5m                   # the second step (or enrollment) must follow the password within this time
+    max-failures: 5               # consecutive wrong codes per account before blocking
+    initial-block: 30s            # doubles with each further failure ...
+    max-block: 15m                # ... up to this
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!prod"
+
+mfa:
+  encryption:
+    active-key-id: demo-1
+    keys:
+      # DEMO ONLY: a committed key, so the example runs out of the box. Anything encrypted with it is public.
+      demo-1: "Cuu5w2+AH+5ia8nC++BHb7GlzRFFnI4pXrS1zceQsoA="
+
+# DEMO ONLY users. Hashes are Argon2id (m=19456 KiB, t=2, p=1); plaintext passwords never appear in config.
+demo:
+  users:
+    - username: alice
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$nv8myN2XkDI+CMuYw5W/TA$KUSuErkZLAwdIa10UnIEnP1L5zhpPsru2md1SPBDqug" # DEMO password: alice-demo-passphrase
+    - username: bob
+      password-hash: "{argon2}$argon2id$v=19$m=19456,t=2,p=1$C3woH8K2Y4t77TKZrBT6YQ$CH7Z9gTBxa1xUibjf4gZm9bg3M9HsXxw6Z3ti9b0It0" # DEMO password: bob-demo-passphrase
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  forward-headers-strategy: native  # trust X-Forwarded-* only from internal proxies (see 01-session-auth)
+  servlet:
+    session:
+      cookie:
+        name: __Host-SESSION        # browser accepts it only with Secure, Path=/ and no Domain
+        secure: true
+
+mfa:
+  encryption:
+    # No default: startup fails unless the deployment provides the keys, for example from a secret manager as
+    # environment variables MFA_ENCRYPTION_ACTIVEKEYID=k202610 and MFA_ENCRYPTION_KEYS_K202610=<Base64 256-bit key>
+    # (Spring binds the second one to mfa.encryption.keys.k202610). Better still, keep the key in a KMS and only
+    # hold data keys in memory (envelope encryption). Users also come from a real user store, not from "demo".
+    active-key-id: ${MFA_ENCRYPTION_ACTIVEKEYID}

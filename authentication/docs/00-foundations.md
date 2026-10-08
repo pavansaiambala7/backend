@@ -472,7 +472,7 @@ Security protocols fail in subtle ways that tests do not catch: timing leaks, no
 | JWT creation and validation | Spring Security OAuth2 Resource Server / Nimbus JOSE + JWT with an algorithm allowlist |
 | Login, sessions, CSRF | Spring Security defaults (`formLogin`, session fixation protection, CSRF filter) |
 | SSO and delegated access | OpenID Connect and OAuth 2 via Spring Security (`oauth2Login`, `oauth2ResourceServer`, Spring Authorization Server, now part of Spring Security 7) |
-| Passkeys | Spring Security WebAuthn support (`http.webAuthn(...)`) |
+| Passkeys | Spring Security WebAuthn support (`http.webAuthn(...)`, plus the `spring-security-webauthn` module) |
 | Encryption at rest, envelope encryption | A cloud KMS or a vetted library such as Google Tink |
 
 ---
@@ -518,7 +518,7 @@ Security protocols fail in subtle ways that tests do not catch: timing leaks, no
 
 ### 12.1 Authentication vs authorization in one filter chain
 
-The lambda DSL below shows the separation clearly: `formLogin` and `httpBasic` *authenticate*; `authorizeHttpRequests` *authorizes*; `exceptionHandling` decides between 401 and 403.
+The lambda DSL below shows the separation clearly: `formLogin` *authenticates*; `authorizeHttpRequests` *authorizes*; `exceptionHandling` decides between 401 and 403.
 
 ```java
 package com.example.auth.foundations;

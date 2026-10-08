@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add the account to your app</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Add the account to your app</h1>
+
+    <p>In your authenticator app, add an account and type in this key (time-based, 6 digits):</p>
+    <p><strong><code id="secret" th:text="${enrollment.secret()}">ABCDEFGH</code></strong></p>
+
+    <p class="hint">Or import this URI (a QR code would contain exactly this text):<br>
+        <code id="otpauth-uri" th:text="${enrollment.otpauthUri()}">otpauth://totp/...</code></p>
+
+    <p class="error" th:if="${error}">That code is not valid for this key. Check the app's clock and try the current code.</p>
+
+    <form method="post" th:action="@{/mfa/totp/confirm}">
+        <label for="code">Then enter the 6-digit code it shows</label>
+        <input id="code" name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"
+               autocomplete="one-time-code" required autofocus>
+        <button type="submit">Confirm</button>
+    </form>
+</main>
+</body>
+</html>

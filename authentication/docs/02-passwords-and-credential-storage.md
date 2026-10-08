@@ -161,7 +161,7 @@ The OWASP minimums are a floor. Tune upward on your production hardware:
 1. Start from m=19 MiB, t=2, p=1.
 2. Benchmark verification on a production-sized instance under realistic concurrency.
 3. Increase memory first (it hurts attackers most), then iterations, until a single verification takes roughly 100-500 ms and stays well under 1 second (OWASP: calculating a hash should take less than one second).
-4. Check the **capacity math**: memory per hash × peak concurrent logins must fit comfortably in RAM. At 19 MiB per hash, 50 simultaneous verifications need about 950 MiB. At 64 MiB, the same peak needs 3.2 GiB.
+4. Check the **capacity math**: memory per hash × peak concurrent logins must fit comfortably in RAM. At 19 MiB per hash, 50 simultaneous verifications need about 950 MiB. At 64 MiB, the same peak needs 3,200 MiB (about 3.1 GiB).
 5. Record the parameters (they are in the hash string) and revisit them every year or two.
 
 Login is an expensive endpoint by design, which makes it a denial-of-service target. Protect it:

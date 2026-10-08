@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your recovery codes</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main>
+    <h1>Your recovery codes</h1>
+    <p class="warning">Save these codes somewhere safe (a password manager, or printed). Each one signs you in once if
+        you lose your authenticator. They are shown only now; any earlier codes no longer work.</p>
+
+    <ol class="recovery-codes">
+        <li th:each="code : ${recoveryCodes}"><code class="recovery-code" th:text="${code}">ABCD-EFGH-IJKL-MNOP</code></li>
+    </ol>
+
+    <p><a id="continue" th:href="@{${continueUrl}}">I have saved them, continue</a></p>
+</main>
+</body>
+</html>

@@ -213,7 +213,7 @@ In practice, most APIs avoid JWE for access tokens: if the client must not read 
 
 RFC 9068 standardizes JWT access tokens so resource servers from different vendors can validate them consistently:
 
-- Header: `typ` **must** be `at+jwt` (the media type `application/at+jwt`). Resource servers must check it, which prevents an ID token or other JWT from being accepted as an access token.
+- Header: `typ` declares the media type `application/at+jwt`, written as `at+jwt` (the RFC recommends omitting the `application/` prefix). Resource servers must check it and reject anything other than `at+jwt` or `application/at+jwt`, which prevents an ID token or other JWT from being accepted as an access token.
 - Required claims: `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`.
 - Optional: `scope`, `auth_time`, `acr`, `amr`, and authorization attributes such as `groups`, `roles`, `entitlements`.
 - Must be signed (unsigned `alg: none` is forbidden); `RS256` support is mandatory for interoperability.
@@ -425,6 +425,7 @@ CREATE TABLE refresh_token (
     family_id     UUID        NOT NULL,      -- one family per login
     user_id       UUID        NOT NULL,
     client_id     VARCHAR(100) NOT NULL,
+    scope         VARCHAR(1000) NOT NULL,     -- scopes granted at login, reused for new access tokens
     token_hash    CHAR(64)    NOT NULL UNIQUE, -- SHA-256 hex of the token, never the token itself
     parent_id     UUID,                       -- the token this one replaced
     issued_at     TIMESTAMPTZ NOT NULL,
@@ -462,7 +463,7 @@ public TokenPair refresh(String presentedToken, String clientId) {
     repository.markUsed(current.id(), clock.instant());
     String next = randomToken256();                       // SecureRandom, Base64URL
     repository.save(current.successor(sha256Hex(next), clock.instant()));
-    String accessToken = accessTokenService.issue(current.userId(), clientId);
+    String accessToken = accessTokenService.issue(current.userId(), clientId, current.scopes());
     return new TokenPair(accessToken, next);
 }
 ```
@@ -509,7 +510,7 @@ HTTP/1.1 200 OK
 Content-Length: 0
 ```
 
-The server responds `200` even for an unknown token, so the endpoint cannot be used to probe for valid tokens.
+The server responds `200` even for an invalid or unknown token (RFC 7009 Section 2.2): the client could not do anything useful with an error, and the goal, a token that no longer works, is already met. A side benefit is that the endpoint does not reveal which tokens are valid.
 
 ### 10.2 Introspection request (RFC 7662)
 
@@ -847,9 +848,21 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://auth.example.com
+          jwk-set-uri: https://auth.example.com/oauth2/jwks
           audiences: https://api.example.com
           jws-algorithms: RS256, ES256
 ```
+
+Two things to know about this route. Boot applies `jws-algorithms` only to a `jwk-set-uri` decoder; with `issuer-uri` alone, the accepted algorithms are derived from the discovered JWK set (each key's `alg`, or every RSA or EC algorithm for a key without one), so set both. And Boot builds Spring Security's default validators plus issuer and audience checks, so the default `typ` rule (`JWT` or absent) rejects `at+jwt` tokens. Declaring a `JwtTypeValidator` bean replaces that rule, because Boot adds every `OAuth2TokenValidator<Jwt>` bean to the decoder:
+
+```java
+@Bean
+JwtTypeValidator accessTokenTypeValidator() {
+    return new JwtTypeValidator("at+jwt", "application/at+jwt");
+}
+```
+
+This route still does not require the RFC 9068 claims (`sub`, `client_id`, `iat`, `jti`); use the explicit decoder above when you need them.
 
 ### 17.2 Issuing tokens: NimbusJwtEncoder with kid and at+jwt
 
